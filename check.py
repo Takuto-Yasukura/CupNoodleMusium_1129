@@ -14,6 +14,7 @@ URL = (
 )
 TARGET_DAY = "29"      # 11/29 の「29」
 TARGET_TIME = "10:30"  # 監視する時間枠
+MESSAGE = f"常光くんとのカップヌードルミュージアムの{TARGET_TIME}枠は残り30以下です。"
 TOPIC = os.environ["NTFY_TOPIC"]
 DEBUG = os.environ.get("DEBUG") == "1"
 
@@ -85,14 +86,17 @@ def main() -> int:
 
         if DEBUG:
             dump(page, "debug")
-            notify(f"【動作確認】11/{TARGET_DAY} の表示: {option_text}")
+            notify(f"【疎通テスト】{MESSAGE}")
 
         print(f"読み取り結果: {option_text}")
         m = re.search(r"(\d+)\s*現在の残数", option_text)
         if m:
             remaining = m.group(1)
             if remaining != last:
-                notify(f"11/{TARGET_DAY} {TARGET_TIME} 残り{remaining}枚です")
+                notify(
+                    f"常光くんとのカップヌードルミュージアムの{TARGET_TIME}枠は"
+                    f"残り{remaining}です。"
+                )
                 STATE_FILE.write_text(remaining)
         else:
             # 残数表示なし(30以上) → 状態をリセット
