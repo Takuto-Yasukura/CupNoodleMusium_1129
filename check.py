@@ -20,6 +20,7 @@ DEBUG = os.environ.get("DEBUG") == "1"
 STATE_DIR = Path("state")
 STATE_FILE = STATE_DIR / "last.txt"
 DEBUG_DIR = Path("debug")
+HOLDER = {}  # エラー時に画面を保存するため、ページを覚えておく
 
 
 def notify(message: str) -> None:
@@ -47,7 +48,9 @@ def main() -> int:
         browser = p.chromium.launch()
         ctx = browser.new_context(locale="ja-JP", timezone_id="Asia/Tokyo")
         page = ctx.new_page()
-        page.goto(URL, wait_until="networkidle", timeout=60000)
+        HOLDER["page"] = page
+        page.goto(URL, wait_until="domcontentloaded", timeout=60000)
+        page.wait_for_timeout(5000)
 
         # カレンダーで対象日をクリック
         day = page.locator("td, a, button").filter(
@@ -91,4 +94,12 @@ def main() -> int:
 
 
 if __name__ == "__main__":
-    sys.exit(main())
+    try:
+        sys.exit(main())
+    except Exception:
+        if "page" in HOLDER:
+            try:
+                dump(HOLDER["page"], "error")
+            except Exception:
+                pass
+        raise
