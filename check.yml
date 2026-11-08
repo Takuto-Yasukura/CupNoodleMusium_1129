@@ -1,0 +1,45 @@
+name: check-tickets
+
+on:
+  schedule:
+    - cron: "7 * * * *"
+  workflow_dispatch:
+    inputs:
+      debug:
+        description: "動作確認モード(1で有効)"
+        default: "0"
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install Playwright
+        run: |
+          pip install playwright
+          playwright install --with-deps chromium
+
+      # 前回通知した残数を引き継ぐ(同じ残数で重複通知しないため)
+      - uses: actions/cache@v4
+        with:
+          path: state
+          key: state-${{ github.run_id }}
+          restore-keys: state-
+
+      - name: Check tickets
+        run: python check.py
+        env:
+          NTFY_TOPIC: ${{ secrets.NTFY_TOPIC }}
+          DEBUG: ${{ inputs.debug }}
+
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: debug
+          path: debug/
+          if-no-files-found: ignore
