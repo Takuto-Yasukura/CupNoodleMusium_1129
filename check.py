@@ -53,13 +53,22 @@ def main() -> int:
         page.wait_for_timeout(5000)
 
         # カレンダーで対象日をクリック
-        day = page.locator("td, a, button").filter(
+        # 前月(old)・翌月(new)の日付は除外して、当月の29日だけを探す
+        day = page.locator("td.day:not(.old):not(.new)").filter(
             has_text=re.compile(rf"^\s*{TARGET_DAY}\s*$")
         )
         if day.count() == 0:
             dump(page, "calendar_not_found")
             print("カレンダーの対象日が見つかりません", file=sys.stderr)
             return 1
+        if "disabled" in (day.first.get_attribute("class") or ""):
+            # 満席・販売前などでカレンダー上で選べない状態
+            print(f"11/{TARGET_DAY} は現在選択できません(満席または販売前)")
+            if DEBUG:
+                dump(page, "day_disabled")
+                notify(f"【動作確認】11/{TARGET_DAY} はカレンダー上で選択不可です")
+            browser.close()
+            return 0
         day.first.click()
         page.wait_for_timeout(3000)
 
